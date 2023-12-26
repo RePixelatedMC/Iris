@@ -35,6 +35,9 @@ import org.bukkit.entity.Entity;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.inventory.ItemStack;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+
 public interface INMSBinding {
     boolean hasTile(Location l);
 
@@ -103,4 +106,21 @@ public interface INMSBinding {
     void setTreasurePos(Dolphin dolphin, com.volmit.iris.core.nms.container.BlockPos pos);
 
     void inject(long seed, Engine engine, World world) throws NoSuchFieldException, IllegalAccessException;
+
+    default int setWatchDogTimeout(int timeout) {
+        try {
+            Class<?> SpigotConfig = Class.forName("org.spigotmc.SpigotConfig");
+            Field timeoutTime = SpigotConfig.getDeclaredField("timeoutTime");
+            Field restartOnCrash = SpigotConfig.getDeclaredField("restartOnCrash");
+
+            Class<?> WatchdogThread = Class.forName("org.spigotmc.WatchdogThread");
+            Method doStart = WatchdogThread.getDeclaredMethod("doStart", int.class, boolean.class);
+
+            doStart.invoke(null, timeout, restartOnCrash.getBoolean(null));
+            return timeoutTime.getInt(null);
+        } catch (Throwable e) {
+            e.printStackTrace();
+            return 60;
+        }
+    }
 }

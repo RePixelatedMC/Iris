@@ -22,9 +22,9 @@ import com.google.common.util.concurrent.AtomicDouble;
 import com.volmit.iris.Iris;
 import com.volmit.iris.core.IrisSettings;
 import com.volmit.iris.core.ServerConfigurator;
+import com.volmit.iris.core.nms.INMS;
 import com.volmit.iris.core.pregenerator.PregenTask;
 import com.volmit.iris.core.service.StudioSVC;
-import com.volmit.iris.engine.framework.Engine;
 import com.volmit.iris.engine.object.IrisDimension;
 import com.volmit.iris.engine.platform.PlatformChunkGenerator;
 import com.volmit.iris.core.safeguard.UtilsSFG;
@@ -43,11 +43,11 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static com.volmit.iris.core.tools.IrisPackBenchmarking.benchmark;
 import static com.volmit.iris.core.safeguard.IrisSafeguard.unstablemode;
@@ -139,6 +139,7 @@ public class IrisCreator {
             Iris.service(StudioSVC.class).installIntoWorld(sender, d.getLoadKey(), new File(Bukkit.getWorldContainer(), name()));
         }
 
+        int def = INMS.get().setWatchDogTimeout(Integer.MAX_VALUE);
         PlatformChunkGenerator access = null;
         AtomicReference<World> world = new AtomicReference<>();
         AtomicDouble pp = new AtomicDouble(0);
@@ -155,6 +156,7 @@ public class IrisCreator {
         access = (PlatformChunkGenerator) wc.generator();
         PlatformChunkGenerator finalAccess1 = access;
 
+        CountDownLatch latch = new CountDownLatch(1);
         J.a(() ->
         {
             int req = 441;
@@ -175,6 +177,16 @@ public class IrisCreator {
                         J.sleep(1000);
                     }
                 }
+            }
+            latch.countDown();
+            //if (benchmark){loaded = true;}
+        });
+        J.a(() -> {
+            try {
+                latch.await(10, TimeUnit.MINUTES);
+			} catch (InterruptedException ignored) {
+            } finally {
+                INMS.get().setWatchDogTimeout(def);
             }
         });
 
