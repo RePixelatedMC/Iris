@@ -15,6 +15,7 @@ import com.volmit.iris.util.nbt.io.NBTUtil;
 import com.volmit.iris.util.nbt.mca.NBTWorld;
 import com.volmit.iris.util.nbt.mca.palette.*;
 import com.volmit.iris.util.nbt.tag.CompoundTag;
+import com.volmit.iris.util.scheduling.S;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -25,8 +26,10 @@ import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.biome.BiomeSource;
+import net.minecraft.world.level.biome.BiomeSpecialEffects;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -57,9 +60,9 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 public class NMSBinding implements INMSBinding {
     private final KMap<Biome, Object> baseBiomeCache = new KMap<>();
@@ -69,6 +72,14 @@ public class NMSBinding implements INMSBinding {
     private final AtomicCache<MCAPalette<BlockState>> globalCache = new AtomicCache<>();
     private final AtomicCache<RegistryAccess> registryAccess = new AtomicCache<>();
     private final AtomicCache<Method> byIdRef = new AtomicCache<>();
+    private final Field abnormalExit = ((Supplier<Field>) () -> {
+		try {
+			return MinecraftServer.class.getDeclaredField("abnormalExit");
+		} catch (Throwable ignored) {
+			Iris.debug("Field MinecraftServer.abnormalExit not found!");
+			return null;
+		}
+	}).get();
     private Field biomeStorageCache = null;
 
     private static Object getFor(Class<?> type, Object source) {
@@ -484,6 +495,43 @@ public class NMSBinding implements INMSBinding {
         CustomBiomeSource customBiomeSource = new CustomBiomeSource(seed, engine, world);
         unsafe.putObject(biomeSource.get(serverLevel.getChunkSource().chunkMap.generator), unsafe.objectFieldOffset(biomeSource), customBiomeSource);
         biomeSource.set(serverLevel.getChunkSource().chunkMap.generator, customBiomeSource);
+    }
+
+    @Override
+    public boolean setBiomeColor(String key, Integer fogColor, Integer waterColor, Integer waterFogColor, Integer skyColor, Integer foliageColor, Integer grassColor) {
+        net.minecraft.world.level.biome.Biome biome = getCustomBiomeRegistry().get(new ResourceLocation(key));
+        if (biome == null)
+            throw new IllegalArgumentException("Boime not found!");
+        Integer[] colors = new Integer[]{fogColor, waterColor, waterFogColor, skyColor, foliageColor, grassColor};
+        BiomeSpecialEffects effects = biome.getSpecialEffects();
+        Field[] fields = BiomeSpecialEffects.class.getDeclaredFields();
+        boolean changed = false;
+        try {
+            for (int i = 0; i < 6; i++) {
+                Integer color = colors[i];
+                Field field = fields[i+1];
+                field.setAccessible(true);
+
+                if (i < 4 && color != null) {
+                    if (equals(field.getInt(effects), color))
+                        continue;
+                    field.setInt(effects, color);
+                } else if (i >= 4) {
+                    if (equals(((Optional<Integer>) field.get(effects)).orElse(null), color))
+                        continue;
+                    field.set(effects, Optional.ofNullable(color));
+                }
+                changed = true;
+            }
+        } catch (Throwable e) {
+            e.printStackTrace();
+            Iris.error("Failed to set biome color for %s", key);
+        }
+        return changed;
+    }
+
+    private static boolean equals(Integer i1, Integer i2) {
+        return String.valueOf(i1).equals(String.valueOf(i2));
     }
 
     private static Field getField(Class<?> clazz, Class<?> fieldType) throws NoSuchFieldException {

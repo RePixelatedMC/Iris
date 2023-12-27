@@ -158,7 +158,7 @@ public class IrisBiomeCustom {
         return j.toString(4);
     }
 
-    private int parseColor(String c) {
+    public static int parseColor(String c) {
         String v = (c.startsWith("#") ? c : "#" + c).trim();
         try {
             return Color.decode(v).getRGB();

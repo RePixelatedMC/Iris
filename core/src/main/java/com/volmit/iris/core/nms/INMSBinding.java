@@ -35,6 +35,8 @@ import org.bukkit.entity.Entity;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.Map;
+
 public interface INMSBinding {
     boolean hasTile(Location l);
 
@@ -103,4 +105,8 @@ public interface INMSBinding {
     void setTreasurePos(Dolphin dolphin, com.volmit.iris.core.nms.container.BlockPos pos);
 
     void inject(long seed, Engine engine, World world) throws NoSuchFieldException, IllegalAccessException;
+
+    default boolean setBiomeColor(String key, Integer fogColor, Integer waterColor, Integer waterFogColor, Integer skyColor, Integer foliageColor, Integer grassColor) {
+        return false;
+    }
 }
