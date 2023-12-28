@@ -15,12 +15,9 @@ import com.volmit.iris.util.nbt.io.NBTUtil;
 import com.volmit.iris.util.nbt.mca.NBTWorld;
 import com.volmit.iris.util.nbt.mca.palette.*;
 import com.volmit.iris.util.nbt.tag.CompoundTag;
-import com.volmit.iris.util.scheduling.S;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
+import net.minecraft.core.*;
 import net.minecraft.core.Registry;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.TagParser;
@@ -420,13 +417,13 @@ public class NMSBinding implements INMSBinding {
     @Override
     public MCAPaletteAccess createPalette() {
         MCAIdMapper<BlockState> registry = registryCache.aquireNasty(() -> {
-            Field cf = net.minecraft.core.IdMapper.class.getDeclaredField("tToId");
-            Field df = net.minecraft.core.IdMapper.class.getDeclaredField("idToT");
-            Field bf = net.minecraft.core.IdMapper.class.getDeclaredField("nextId");
+            Field cf = IdMapper.class.getDeclaredField("tToId");
+            Field df = IdMapper.class.getDeclaredField("idToT");
+            Field bf = IdMapper.class.getDeclaredField("nextId");
             cf.setAccessible(true);
             df.setAccessible(true);
             bf.setAccessible(true);
-            net.minecraft.core.IdMapper<BlockState> blockData = Block.BLOCK_STATE_REGISTRY;
+            IdMapper<BlockState> blockData = Block.BLOCK_STATE_REGISTRY;
             int b = bf.getInt(blockData);
             Object2IntMap<BlockState> c = (Object2IntMap<BlockState>) cf.get(blockData);
             List<BlockState> d = (List<BlockState>) df.get(blockData);
@@ -512,16 +509,20 @@ public class NMSBinding implements INMSBinding {
                 Field field = fields[i+1];
                 field.setAccessible(true);
 
-                if (i < 4 && color != null) {
-                    if (equals(field.getInt(effects), color))
+                Integer old;
+                if (i < 4) {
+                    old = field.getInt(effects);
+                    if (color == null || equals(old, color))
                         continue;
                     field.setInt(effects, color);
-                } else if (i >= 4) {
-                    if (equals(((Optional<Integer>) field.get(effects)).orElse(null), color))
+				} else {
+                    old = ((Optional<Integer>) field.get(effects)).orElse(null);
+                    if (equals(old, color))
                         continue;
                     field.set(effects, Optional.ofNullable(color));
-                }
-                changed = true;
+				}
+				changed = true;
+                Iris.debug("Changed %s for %s from %s to %s".formatted(getColor(i), key, getHex(old), getHex(color)));
             }
         } catch (Throwable e) {
             e.printStackTrace();
@@ -531,7 +532,34 @@ public class NMSBinding implements INMSBinding {
     }
 
     private static boolean equals(Integer i1, Integer i2) {
-        return String.valueOf(i1).equals(String.valueOf(i2));
+		return String.valueOf(i1).equals(String.valueOf(i2));
+    }
+
+    private String getHex(Integer color) {
+        if (color == null)
+            return null;
+        java.awt.Color c = new java.awt.Color(color);
+        return "#" + toHex(c.getRed()) + toHex(c.getGreen()) + toHex(c.getBlue());
+    }
+
+    private String toHex(int i) {
+        StringBuilder hex = new StringBuilder(Integer.toUnsignedString(i, 16));
+        while (hex.length() < 2) {
+            hex.insert(0, "0");
+        }
+        return hex.toString();
+    }
+
+    private String getColor(int i) {
+        return switch (i) {
+            case 0 -> "fogColor";
+            case 1 -> "waterColor";
+            case 2 -> "waterFogColor";
+            case 3 -> "skyColor";
+            case 4 -> "foliageColor";
+            case 5 -> "grassColor";
+            default -> throw new IllegalStateException("Unexpected value: " + i);
+        };
     }
 
     private static Field getField(Class<?> clazz, Class<?> fieldType) throws NoSuchFieldException {
