@@ -23,6 +23,7 @@ import com.volmit.iris.core.IrisSettings;
 import com.volmit.iris.core.gui.NoiseExplorerGUI;
 import com.volmit.iris.core.gui.VisionGUI;
 import com.volmit.iris.core.loader.IrisData;
+import com.volmit.iris.core.nms.INMS;
 import com.volmit.iris.core.project.IrisProject;
 import com.volmit.iris.core.service.ConversionSVC;
 import com.volmit.iris.core.service.StudioSVC;
@@ -59,6 +60,7 @@ import com.volmit.iris.util.scheduling.PrecisionStopwatch;
 import com.volmit.iris.util.scheduling.jobs.QueueJob;
 import io.papermc.lib.PaperLib;
 import org.bukkit.*;
+import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.util.BlockVector;
@@ -746,6 +748,55 @@ public class CommandStudio implements DecreeExecutor {
                         .computeIfAbsent(n2, (k) -> new KList<>()).addIfMissing(n3);
             }
         }
+    }
+
+    @Decree(description = "Reload the biome colors", origin = DecreeOrigin.PLAYER)
+    public void reloadColors(
+            @Param(description = "Whether to only reload the biome you are standing in or all biomes", defaultValue = "false") boolean single,
+            @Param(description = "Whether or not to kick you if a biome color was changes", defaultValue = "true") boolean kick
+    ) {
+        if (noStudio()) return;
+        Player player = player();
+        Engine engine = engine();
+        boolean changedColor = false;
+        if (single) {
+            Location loc = player.getLocation();
+            changedColor = reloadColors(engine, engine.getBiome(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ()));
+        } else {
+            for (IrisBiome biome : engine.getAllBiomes()) {
+                if (reloadColors(engine, biome))
+                    changedColor = true;
+            }
+        }
+
+        sender().sendMessage(C.GREEN + "Reloaded colors!");
+        if (kick && changedColor) {
+            J.s(() -> player.kickPlayer("Biome colors changed!"));
+        }
+    }
+
+    private boolean reloadColors(Engine engine, IrisBiome biome) {
+        if (!biome.isCustom())
+            return false;
+        String loadKey = engine.getDimension().getLoadKey() + ":";
+        boolean changedColor = false;
+        for (String derivative : biome.getCustomDerivatives()) {
+            IrisBiomeCustom custom = engine.getData().getDerivativeLoader().load(derivative);
+            String key = loadKey + custom.getId();
+            try {
+                boolean result = INMS.get().setBiomeColor(key,
+                        IrisBiomeCustom.parseColor(custom.getFogColor()),
+                        IrisBiomeCustom.parseColor(custom.getWaterColor()),
+                        IrisBiomeCustom.parseColor(custom.getWaterFogColor()),
+                        IrisBiomeCustom.parseColor(custom.getSkyColor()),
+                        custom.getFoliageColor().isEmpty() ? null : IrisBiomeCustom.parseColor(custom.getFoliageColor()),
+                        custom.getGrassColor().isEmpty() ? null : IrisBiomeCustom.parseColor(custom.getGrassColor()));
+                if (result) changedColor = true;
+            } catch (Throwable e) {
+                Iris.reportError(e);
+            }
+        }
+        return changedColor;
     }
 
     /**
