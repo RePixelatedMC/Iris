@@ -249,38 +249,6 @@ public class IrisEngine implements Engine {
             synchronized (ServerConfigurator.class) {
                 ServerConfigurator.installDataPacks(false);
             }
-            String loadKey = getDimension().getLoadKey() + ":";
-            boolean changedColor = false;
-            for (IrisBiome biome : getAllBiomes()) {
-                if (!biome.isCustom())
-                    continue;
-                for (String derivative : biome.getCustomDerivatives()) {
-                    IrisBiomeCustom custom = getData().getDerivativeLoader().load(derivative);
-                    String key = loadKey + custom.getId();
-                    try {
-                        boolean result = INMS.get().setBiomeColor(key,
-                                IrisBiomeCustom.parseColor(custom.getFogColor()),
-                                IrisBiomeCustom.parseColor(custom.getWaterColor()),
-                                IrisBiomeCustom.parseColor(custom.getWaterFogColor()),
-                                IrisBiomeCustom.parseColor(custom.getSkyColor()),
-                                custom.getFoliageColor().isEmpty() ? null : IrisBiomeCustom.parseColor(custom.getFoliageColor()),
-                                custom.getGrassColor().isEmpty() ? null : IrisBiomeCustom.parseColor(custom.getGrassColor()));
-                        if (result) changedColor = true;
-                    } catch (Throwable e) {
-                        Iris.reportError(e);
-                    }
-				}
-            }
-            if (changedColor) {
-                J.s(() -> {
-                    World world = getWorld().realWorld();
-                    if (world == null)
-                        return;
-                    for (Player player : world.getPlayers()) {
-                        player.kickPlayer("Biome color reloaded!");
-                    }
-                });
-            }
         });
     }
 
