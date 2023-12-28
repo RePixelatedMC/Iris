@@ -56,7 +56,8 @@ public class CustomBiomeSource extends BiomeSource {
 
         for (IrisBiome i : engine.getAllBiomes()) {
             if (i.isCustom()) {
-                for (IrisBiomeCustom j : i.getCustomDerivitives()) {
+                for (String key : i.getCustomDerivatives()) {
+                    IrisBiomeCustom j = engine.getData().getDerivativeLoader().load(key);
                     b.add(customRegistry.getHolder(customRegistry.getResourceKey(customRegistry
                             .get(new ResourceLocation(engine.getDimension().getLoadKey() + ":" + j.getId()))).get()).get());
                 }
@@ -119,7 +120,8 @@ public class CustomBiomeSource extends BiomeSource {
 
         for (IrisBiome i : engine.getAllBiomes()) {
             if (i.isCustom()) {
-                for (IrisBiomeCustom j : i.getCustomDerivitives()) {
+                for (String key : i.getCustomDerivatives()) {
+                    IrisBiomeCustom j = engine.getData().getDerivativeLoader().load(key);
                     m.put(j.getId(), customRegistry.getHolder(customRegistry.getResourceKey(customRegistry
                             .get(new ResourceLocation(engine.getDimension().getLoadKey() + ":" + j.getId()))).get()).get());
                 }
@@ -143,7 +145,9 @@ public class CustomBiomeSource extends BiomeSource {
         int m = (y - engine.getMinHeight()) << 2;
         IrisBiome ib = engine.getComplex().getTrueBiomeStream().get(x << 2, z << 2);
         if (ib.isCustom()) {
-            return customBiomes.get(ib.getCustomBiome(rng, x << 2, m, z << 2).getId());
+            String loadKey = ib.getCustomBiome(rng, x << 2, m, z << 2);
+            String id = engine.getData().getDerivativeLoader().load(loadKey).getId();
+            return customBiomes.get(id);
         } else {
             org.bukkit.block.Biome v = ib.getSkyBiome(rng, x << 2, m, z << 2);
             return CraftBlock.biomeToBiomeBase(biomeRegistry, v);

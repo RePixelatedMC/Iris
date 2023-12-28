@@ -449,7 +449,8 @@ public class IrisDimension extends IrisRegistrant {
             if (i.isCustom()) {
                 write = true;
 
-                for (IrisBiomeCustom j : i.getCustomDerivitives()) {
+                for (String key : i.getCustomDerivatives()) {
+                    IrisBiomeCustom j = data.getData().getDerivativeLoader().load(key);
                     File output = new File(datapacks, "iris/data/" + getLoadKey().toLowerCase() + "/worldgen/biome/" + j.getId() + ".json");
 
                     if (!output.exists()) {

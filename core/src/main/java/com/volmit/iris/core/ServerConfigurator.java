@@ -203,7 +203,8 @@ public class ServerConfigurator {
 
         for (IrisBiome i : dimension.getAllBiomes(() -> idm)) {
             if (i.isCustom()) {
-                for (IrisBiomeCustom j : i.getCustomDerivitives()) {
+                for (String key : i.getCustomDerivatives()) {
+                    IrisBiomeCustom j = idm.getDerivativeLoader().load(key);
                     keys.add(dimension.getLoadKey() + ":" + j.getId());
                 }
             }

@@ -254,7 +254,8 @@ public class IrisEngine implements Engine {
             for (IrisBiome biome : getAllBiomes()) {
                 if (!biome.isCustom())
                     continue;
-                for (IrisBiomeCustom custom : biome.getCustomDerivitives()) {
+                for (String derivative : biome.getCustomDerivatives()) {
+                    IrisBiomeCustom custom = getData().getDerivativeLoader().load(derivative);
                     String key = loadKey + custom.getId();
                     try {
                         boolean result = INMS.get().setBiomeColor(key,

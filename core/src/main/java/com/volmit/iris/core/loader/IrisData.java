@@ -73,6 +73,7 @@ public class IrisData implements ExclusionStrategy, TypeAdapterFactory {
     private ResourceLoader<IrisCave> caveLoader;
     private ResourceLoader<IrisRavine> ravineLoader;
     private ResourceLoader<IrisMatterObject> matterObjectLoader;
+    private ResourceLoader<IrisBiomeCustom> derivativeLoader;
     private KMap<String, KList<String>> possibleSnippets;
     private Gson gson;
     private Gson snippetLoader;
@@ -188,6 +189,10 @@ public class IrisData implements ExclusionStrategy, TypeAdapterFactory {
 
     public static IrisGenerator loadAnyGenerator(String key) {
         return loadAny(key, (dm) -> dm.getGeneratorLoader().load(key, false));
+    }
+
+    public static IrisBiomeCustom loadAnyDerivative(String key) {
+        return loadAny(key, (dm) -> dm.getDerivativeLoader().load(key, false));
     }
 
     public static <T extends IrisRegistrant> T loadAny(String key, Function<IrisData, T> v) {
@@ -337,6 +342,7 @@ public class IrisData implements ExclusionStrategy, TypeAdapterFactory {
         this.imageLoader = registerLoader(IrisImage.class);
         this.scriptLoader = registerLoader(IrisScript.class);
         this.matterObjectLoader = registerLoader(IrisMatterObject.class);
+        this.derivativeLoader = registerLoader(IrisBiomeCustom.class);
         gson = builder.create();
     }
 

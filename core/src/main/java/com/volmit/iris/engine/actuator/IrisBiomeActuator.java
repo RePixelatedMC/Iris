@@ -54,7 +54,7 @@ public class IrisBiomeActuator extends EngineAssignedActuator<Biome> {
                     MatterBiomeInject matter;
 
                     if (ib.isCustom()) {
-                        IrisBiomeCustom custom = ib.getCustomBiome(rng, x, 0, z);
+                        IrisBiomeCustom custom = getData().getDerivativeLoader().load(ib.getCustomBiome(rng, x, 0, z));
                         matter = BiomeInjectMatter.get(INMS.get().getBiomeBaseIdForKey(getDimension().getLoadKey() + ":" + custom.getId()));
                     } else {
                         Biome v = ib.getSkyBiome(rng, x, 0, z);

@@ -78,9 +78,10 @@ public class IrisBiome extends IrisRegistrant implements IRare {
     @Required
     @Desc("This is the human readable name for this biome. This can and should be different than the file name. This is not used for loading biomes in other objects.")
     private String name = "Subterranean Land";
-    @ArrayType(min = 1, type = IrisBiomeCustom.class)
+    @ArrayType(min = 1, type = String.class)
+    @RegistryListResource(IrisBiomeCustom.class)
     @Desc("If the biome type custom is defined, specify this")
-    private KList<IrisBiomeCustom> customDerivitives;
+    private KList<String> customDerivatives;
     @Desc("Spawn Entities in this area over time. Iris will continually replenish these mobs just like vanilla does.")
     @ArrayType(min = 1, type = String.class)
     @RegistryListResource(IrisSpawner.class)
@@ -191,7 +192,7 @@ public class IrisBiome extends IrisRegistrant implements IRare {
     }
 
     public boolean isCustom() {
-        return getCustomDerivitives() != null && getCustomDerivitives().isNotEmpty();
+        return getCustomDerivatives() != null && getCustomDerivatives().isNotEmpty();
     }
 
     public double getGenLinkMax(String loadKey) {
@@ -585,12 +586,12 @@ public class IrisBiome extends IrisRegistrant implements IRare {
         return biomeSkyScatter.get(getBiomeGenerator(rng).fit(0, biomeSkyScatter.size() - 1, x, y, z));
     }
 
-    public IrisBiomeCustom getCustomBiome(RNG rng, double x, double y, double z) {
-        if (customDerivitives.size() == 1) {
-            return customDerivitives.get(0);
+    public String getCustomBiome(RNG rng, double x, double y, double z) {
+        if (customDerivatives.size() == 1) {
+            return customDerivatives.get(0);
         }
 
-        return customDerivitives.get(getBiomeGenerator(rng).fit(0, customDerivitives.size() - 1, x, y, z));
+        return customDerivatives.get(getBiomeGenerator(rng).fit(0, customDerivatives.size() - 1, x, y, z));
     }
 
     public KList<IrisBiome> getRealChildren(DataProvider g) {

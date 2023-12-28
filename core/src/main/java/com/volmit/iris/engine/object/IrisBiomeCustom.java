@@ -19,13 +19,16 @@
 package com.volmit.iris.engine.object;
 
 import com.volmit.iris.Iris;
+import com.volmit.iris.core.loader.IrisRegistrant;
 import com.volmit.iris.engine.object.annotations.*;
 import com.volmit.iris.util.collection.KList;
 import com.volmit.iris.util.collection.KMap;
 import com.volmit.iris.util.json.JSONArray;
 import com.volmit.iris.util.json.JSONObject;
+import com.volmit.iris.util.plugin.VolmitSender;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
@@ -38,7 +41,8 @@ import java.util.Locale;
 @AllArgsConstructor
 @Desc("A custom biome, generated through a datapack")
 @Data
-public class IrisBiomeCustom {
+@EqualsAndHashCode(callSuper = false)
+public class IrisBiomeCustom extends IrisRegistrant {
     @Required
     @Desc("The resource key of this biome. Just a simple id such as 'plains' or something.")
     private String id = "";
@@ -172,5 +176,20 @@ public class IrisBiomeCustom {
 
     public String getId() {
         return id.toLowerCase();
+    }
+
+    @Override
+    public String getFolderName() {
+        return "derivitives";
+    }
+
+    @Override
+    public String getTypeName() {
+        return "Derivitive";
+    }
+
+    @Override
+    public void scanForErrors(JSONObject p, VolmitSender sender) {
+
     }
 }
