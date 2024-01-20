@@ -26,6 +26,7 @@ import com.volmit.iris.engine.data.cache.Cache;
 import com.volmit.iris.engine.framework.Engine;
 import com.volmit.iris.engine.mantle.EngineMantle;
 import com.volmit.iris.engine.mantle.MantleWriter;
+import com.volmit.iris.util.collection.KList;
 import com.volmit.iris.util.collection.KMap;
 import com.volmit.iris.util.documentation.BlockCoordinates;
 import com.volmit.iris.util.documentation.ChunkCoordinates;
@@ -397,7 +398,7 @@ public class Mantle {
     private final AtomicLong oldestTectonicPlate = new AtomicLong(0);
     private final ReentrantLock unloadLock = new ReentrantLock();
     @Getter
-    private final Set<Long> toUnload = new HashSet<>();
+    private final KList<Long> toUnload = new KList<>();
 
     /**
      * Save & unload regions that have not been used for more than the
@@ -424,32 +425,38 @@ public class Mantle {
         try {
             Iris.debug("Trimming Tectonic Plates older than " + Form.duration(adjustedIdleDuration.get(), 0));
             if (lastUse != null) {
-                for (Long i : new ArrayList<>(lastUse.keySet())) {
-                    double finalAdjustedIdleDuration = adjustedIdleDuration.get();
-                    hyperLock.withLong(i, () -> {
-                        Long lastUseTime = lastUse.get(i);
-                        if (lastUseTime != null && M.ms() - lastUseTime >= finalAdjustedIdleDuration) {
-                            toUnload.add(i);
-                            Iris.debug("Tectonic Region added to unload");
-                        }
-                    });
+                if (!lastUse.isEmpty()) {
+                    for (Long i : new ArrayList<>(lastUse.keySet())) {
+                        double finalAdjustedIdleDuration = adjustedIdleDuration.get();
+                        hyperLock.withLong(i, () -> {
+                            Long lastUseTime = lastUse.get(i);
+                            if (lastUseTime != null && M.ms() - lastUseTime >= finalAdjustedIdleDuration) {
+                                toUnload.add(i);
+                                Iris.debug("Tectonic Region added to unload");
+                                //Iris.panic();
+                            }
+                        });
+                    }
                 }
             }
 
+        } catch (Throwable e) {
+            Iris.reportError(e);
         } finally {
             ioTrim.set(false);
             unloadLock.unlock();
         }
     }
 
-    public int unloadTectonicPlate(int tectonicLimit) {
-        // todo: Make it advanced with bursts etc
+    public synchronized int unloadTectonicPlate(int tectonicLimit) {
         AtomicInteger i = new AtomicInteger();
         unloadLock.lock();
+        BurstExecutor burst = null;
         try {
-            BurstExecutor burst = MultiBurst.burst.burst(toUnload.size());
-            burst.setMulticore(toUnload.size() > tectonicLimit);
-            for (long id : new ArrayList<>(toUnload)) {
+            KList<Long> copy = toUnload.copy();
+            burst = MultiBurst.burst.burst(copy.size());
+            burst.setMulticore(copy.size() > tectonicLimit);
+            for (long id : copy) {
                 burst.queue(() ->
                         hyperLock.withLong(id, () -> {
                             TectonicPlate m = loadedRegions.get(id);
@@ -462,15 +469,17 @@ public class Mantle {
                                     i.incrementAndGet();
                                     Iris.debug("Unloaded Tectonic Plate " + C.DARK_GREEN + Cache.keyX(id) + " " + Cache.keyZ(id));
                                 } catch (IOException e) {
-                                    e.printStackTrace();
+                                    Iris.reportError(e);
                                 }
                             }
                         }));
-            }
 
+            }
             burst.complete();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             e.printStackTrace();
+            if (burst != null)
+                burst.complete();
         } finally {
             unloadLock.unlock();
             ioTectonicUnload.set(true);
