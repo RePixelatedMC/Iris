@@ -27,6 +27,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.biome.BiomeSource;
+import net.minecraft.world.level.biome.BiomeSpecialEffects;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -61,6 +62,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class NMSBinding implements INMSBinding {
@@ -449,6 +451,74 @@ public class NMSBinding implements INMSBinding {
                 }
             }
         });
+    }
+
+    @Override
+    public boolean setBiomeColor(String key, Integer fogColor, Integer waterColor, Integer waterFogColor, Integer skyColor, Integer foliageColor, Integer grassColor) {
+        net.minecraft.world.level.biome.Biome biome = getCustomBiomeRegistry().get(new ResourceLocation(key));
+        if (biome == null)
+            throw new IllegalArgumentException("Boime not found!");
+        Integer[] colors = new Integer[]{fogColor, waterColor, waterFogColor, skyColor, foliageColor, grassColor};
+        BiomeSpecialEffects effects = biome.getSpecialEffects();
+        Field[] fields = BiomeSpecialEffects.class.getDeclaredFields();
+        boolean changed = false;
+        try {
+            for (int i = 0; i < 6; i++) {
+                Integer color = colors[i];
+                Field field = fields[i+1];
+                field.setAccessible(true);
+
+                Integer old;
+                if (i < 4) {
+                    old = field.getInt(effects);
+                    if (color == null || equals(old, color))
+                        continue;
+                    field.setInt(effects, color);
+                } else {
+                    old = ((Optional<Integer>) field.get(effects)).orElse(null);
+                    if (equals(old, color))
+                        continue;
+                    field.set(effects, Optional.ofNullable(color));
+                }
+                changed = true;
+                Iris.debug("Changed %s for %s from %s to %s".formatted(getColor(i), key, getHex(old), getHex(color)));
+            }
+        } catch (Throwable e) {
+            e.printStackTrace();
+            Iris.error("Failed to set biome color for %s", key);
+        }
+        return changed;
+    }
+
+    private static boolean equals(Integer i1, Integer i2) {
+        return String.valueOf(i1).equals(String.valueOf(i2));
+    }
+
+    private String getHex(Integer color) {
+        if (color == null)
+            return null;
+        java.awt.Color c = new java.awt.Color(color);
+        return "#" + toHex(c.getRed()) + toHex(c.getGreen()) + toHex(c.getBlue());
+    }
+
+    private String toHex(int i) {
+        StringBuilder hex = new StringBuilder(Integer.toUnsignedString(i, 16));
+        while (hex.length() < 2) {
+            hex.insert(0, "0");
+        }
+        return hex.toString();
+    }
+
+    private String getColor(int i) {
+        return switch (i) {
+            case 0 -> "fogColor";
+            case 1 -> "waterColor";
+            case 2 -> "waterFogColor";
+            case 3 -> "skyColor";
+            case 4 -> "foliageColor";
+            case 5 -> "grassColor";
+            default -> throw new IllegalStateException("Unexpected value: " + i);
+        };
     }
 
     public ItemStack applyCustomNbt(ItemStack itemStack, KMap<String, Object> customNbt) throws IllegalArgumentException {
