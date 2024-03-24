@@ -56,6 +56,7 @@ import java.util.zip.GZIPOutputStream;
 
 @Decree(name = "Developer", origin = DecreeOrigin.BOTH, description = "Iris World Manager", aliases = {"dev"})
 public class CommandDeveloper implements DecreeExecutor {
+    private CommandTurboPregen turboPregen;
 
     @Decree(description = "Get Loaded TectonicPlates Count", origin = DecreeOrigin.BOTH, sync = true)
     public void EngineStatus(

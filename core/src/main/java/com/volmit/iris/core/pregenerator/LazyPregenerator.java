@@ -49,7 +49,6 @@ public class LazyPregenerator extends Thread implements Listener {
     private final RollingSequence chunksPerSecond;
     private final RollingSequence chunksPerMinute;
 
-    // A map to keep track of jobs for each world
     private static final Map<String, LazyPregenJob> jobs = new HashMap<>();
 
     public LazyPregenerator(LazyPregenJob job, File destination) {
@@ -155,10 +154,7 @@ public class LazyPregenerator extends Thread implements Listener {
             if (PaperLib.isPaper()) {
                 PaperLib.getChunkAtAsync(world, chunk.getX(), chunk.getZ(), true)
                         .thenAccept((i) -> {
-                            LazyPregenJob j = jobs.get(world.getName());
-                            if (!j.paused) {
-                                Iris.verbose("Generated Async " + chunk);
-                            }
+                            Iris.verbose("Generated Async " + chunk);
                             latch.countDown();
                         });
             } else {
@@ -207,7 +203,6 @@ public class LazyPregenerator extends Thread implements Listener {
     }
 
     public static void setPausedLazy(World world) {
-        // todo: doesnt actually pause
         LazyPregenJob job = jobs.get(world.getName());
         if (isPausedLazy(world)){
             job.paused = false;

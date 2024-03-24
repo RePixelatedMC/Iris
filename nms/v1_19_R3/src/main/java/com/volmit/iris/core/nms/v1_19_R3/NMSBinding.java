@@ -46,6 +46,8 @@ import org.bukkit.craftbukkit.v1_19_R3.entity.CraftDolphin;
 import org.bukkit.craftbukkit.v1_19_R3.inventory.CraftItemStack;
 import org.bukkit.entity.Dolphin;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.generator.ChunkGenerator;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
@@ -278,7 +280,7 @@ public class NMSBinding implements INMSBinding {
 
     @Override
     public KList<Biome> getBiomes() {
-        return new KList<>(Biome.values()).qadd(Biome.CHERRY_GROVE).qdel(Biome.CUSTOM);
+        return new KList<>(Biome.values()).qdel(Biome.CHERRY_GROVE).qdel(Biome.CUSTOM);
     }
 
     @Override
@@ -553,6 +555,12 @@ public class NMSBinding implements INMSBinding {
             case 5 -> "grassColor";
             default -> throw new IllegalStateException("Unexpected value: " + i);
         };
+    }
+
+
+    @Override
+    public Entity spawnEntity(Location location, EntityType type, CreatureSpawnEvent.SpawnReason reason) {
+        return ((CraftWorld) location.getWorld()).spawn(location, type.getEntityClass(), null, reason);
     }
 
     private static Field getField(Class<?> clazz, Class<?> fieldType) throws NoSuchFieldException {
