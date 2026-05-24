@@ -685,7 +685,7 @@ public class IrisObject extends IrisRegistrant {
 
         if (config.isFromBottom()) {
             // todo Convert this to a mode and make it compatible with jigsaw
-            y = (getH() + 1) + rty;
+            y = 1 + rty;
             if (!config.isForcePlace()) {
                 if (placer.isCarved(x, y, z) ||
                         placer.isCarved(x, y - 1, z) ||
